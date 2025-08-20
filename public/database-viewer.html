@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Viewer - Monitoring Platform</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .header { 
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .grid { 
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .card-header {
+            background: #1e293b;
+            color: white;
+            padding: 15px;
+            font-weight: 600;
+        }
+        .card-content { padding: 15px; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+        th, td {
+            text-align: left;
+            padding: 8px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        th { background: #f8fafc; font-weight: 600; }
+        .status-online { color: #22c55e; font-weight: 600; }
+        .status-offline { color: #ef4444; font-weight: 600; }
+        .refresh-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .refresh-btn:hover { background: #2563eb; }
+        .loading { text-align: center; padding: 20px; color: #64748b; }
+        .error { color: #ef4444; padding: 15px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🗄️ Database Viewer - Monitoring Platform</h1>
+            <p>Real-time view of your PostgreSQL database</p>
+            <button class="refresh-btn" onclick="loadAllData()">🔄 Refresh All</button>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <div class="card-header">👥 Users</div>
+                <div class="card-content" id="users-content">
+                    <div class="loading">Loading...</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">🔧 Services</div>
+                <div class="card-content" id="services-content">
+                    <div class="loading">Loading...</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">📊 Recent Metrics</div>
+                <div class="card-content" id="metrics-content">
+                    <div class="loading">Loading...</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">📈 Database Stats</div>
+                <div class="card-content" id="stats-content">
+                    <div class="loading">Loading...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3333/api';
+
+        async function fetchData(endpoint) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`);
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return await response.json();
+            } catch (error) {
+                console.error(`Error fetching ${endpoint}:`, error);
+                return null;
+            }
+        }
+
+        async function loadUsers() {
+            const users = await fetchData('/users');
+            const content = document.getElementById('users-content');
+            
+            if (!users) {
+                content.innerHTML = '<div class="error">Failed to load users</div>';
+                return;
+            }
+
+            content.innerHTML = `
+                <table>
+                    <thead>
+                        <tr><th>ID</th><th>Name</th><th>Email</th><th>Role</th></tr>
+                    </thead>
+                    <tbody>
+                        ${users.map(user => `
+                            <tr>
+                                <td>${user.id}</td>
+                                <td>${user.name}</td>
+                                <td>${user.email}</td>
+                                <td>${user.role}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        async function loadServices() {
+            const services = await fetchData('/services');
+            const content = document.getElementById('services-content');
+            
+            if (!services) {
+                content.innerHTML = '<div class="error">Failed to load services</div>';
+                return;
+            }
+
+            content.innerHTML = `
+                <table>
+                    <thead>
+                        <tr><th>ID</th><th>Name</th><th>URL</th><th>Status</th></tr>
+                    </thead>
+                    <tbody>
+                        ${services.map(service => `
+                            <tr>
+                                <td>${service.id}</td>
+                                <td>${service.name}</td>
+                                <td><a href="${service.url}" target="_blank">${service.url}</a></td>
+                                <td><span class="status-${service.status || 'unknown'}">${service.status || 'Unknown'}</span></td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        async function loadMetrics() {
+            const metrics = await fetchData('/metrics/recent');
+            const content = document.getElementById('metrics-content');
+            
+            if (!metrics) {
+                content.innerHTML = '<div class="error">Failed to load metrics</div>';
+                return;
+            }
+
+            content.innerHTML = `
+                <table>
+                    <thead>
+                        <tr><th>Service</th><th>Status</th><th>Response Time</th><th>Last Check</th></tr>
+                    </thead>
+                    <tbody>
+                        ${metrics.slice(0, 10).map(metric => `
+                            <tr>
+                                <td>${metric.service_name || `Service ${metric.service_id}`}</td>
+                                <td><span class="status-${metric.status}">${metric.status}</span></td>
+                                <td>${metric.response_time ? metric.response_time + 'ms' : 'N/A'}</td>
+                                <td>${new Date(metric.last_checked).toLocaleString()}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        async function loadStats() {
+            const stats = await fetchData('/dashboard/stats');
+            const content = document.getElementById('stats-content');
+            
+            if (!stats) {
+                content.innerHTML = '<div class="error">Failed to load stats</div>';
+                return;
+            }
+
+            content.innerHTML = `
+                <table>
+                    <thead>
+                        <tr><th>Metric</th><th>Count</th></tr>
+                    </thead>
+                    <tbody>
+                        <tr><td>Total Services</td><td>${stats.totalServices}</td></tr>
+                        <tr><td>Active Alerts</td><td>${stats.activeAlerts}</td></tr>
+                        <tr><td>Avg Response Time</td><td>${stats.avgResponseTime}ms</td></tr>
+                        <tr><td>System Uptime</td><td>${stats.uptime}%</td></tr>
+                    </tbody>
+                </table>
+            `;
+        }
+
+        async function loadAllData() {
+            await Promise.all([
+                loadUsers(),
+                loadServices(), 
+                loadMetrics(),
+                loadStats()
+            ]);
+        }
+
+        // Load data when page loads
+        window.addEventListener('load', loadAllData);
+        
+        // Auto-refresh every 30 seconds
+        setInterval(loadAllData, 30000);
+    </script>
+</body>
+</html>
