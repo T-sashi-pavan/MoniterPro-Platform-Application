@@ -1,0 +1,28 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ],
+  "env": {
+    "MONGODB_URI": "@mongodb_uri",
+    "JWT_SECRET": "@jwt_secret",
+    "EMAIL_HOST": "@email_host",
+    "EMAIL_PORT": "@email_port", 
+    "EMAIL_USER": "@email_user",
+    "EMAIL_PASS": "@email_pass",
+    "SENDER_EMAIL": "@sender_email"
+  }
+}
